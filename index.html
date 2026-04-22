@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Childcare Tracker</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --card: #1a1f2e;
+    --surface: #242938;
+    --surface-hover: #2d3342;
+    --text: #e4e6eb;
+    --muted: #9ba3af;
+    --accent: #60a5fa;
+    --accent-hover: #93c5fd;
+    --danger: #f87171;
+    --success: #34d399;
+    --border: #2d3342;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { margin: 0 0 4px; font-size: 28px; }
+  .subtitle { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .card h2 { margin: 0 0 12px; font-size: 18px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+  label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  input[type="text"], input[type="number"], input[type="datetime-local"], input[type="date"], input[type="time"] {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+  }
+  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(96,165,250,0.25); }
+  button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover { background: var(--surface-hover); }
+  button.danger { background: transparent; color: var(--danger); padding: 4px 8px; font-size: 12px; }
+  button.danger:hover { background: rgba(248,113,113,0.15); }
+  .big-btn { padding: 14px 24px; font-size: 16px; }
+  .big-btn.clock-out { background: var(--danger); }
+  .big-btn.clock-out:hover { background: #dc2626; }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat { background: var(--surface); padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
+  .stat .label { font-size: 12px; color: var(--muted); }
+  .stat .value { font-size: 22px; font-weight: 600; margin-top: 2px; }
+  .stat .value.owed { color: var(--success); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+  .empty { text-align: center; padding: 24px; color: var(--muted); font-size: 14px; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 14px; }
+  .msg.success { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
+  .msg.error { background: rgba(248,113,113,0.12); color: #fca5a5; border: 1px solid rgba(248,113,113,0.3); }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 18px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text); background: transparent; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .view[hidden] { display: none; }
+  .checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text);
+    font-weight: normal;
+    padding: 8px 10px;
+    background: var(--surface);
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
+  .checkbox-group label:has(input:checked) {
+    background: rgba(96,165,250,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .checkbox-group input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--accent); }
+  textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(96,165,250,0.25); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(96,165,250,0.18);
+    color: var(--accent);
+    margin: 2px 4px 2px 0;
+  }
+  .supply-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .supply-summary .tag { background: rgba(251,191,36,0.15); color: #fcd34d; }
+  .open-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(251,191,36,0.15);
+    color: #fcd34d;
+  }
+  tr.open-row { background: rgba(251,191,36,0.06); }
+  .form-hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .inline-edit { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .inline-edit input { font-size: 13px; padding: 4px 6px; }
+  @media (max-width: 600px) {
+    .hide-mobile { display: none; }
+    th, td { padding: 8px 4px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Childcare Tracker</h1>
+  <p class="subtitle">Track babysitter hours and daycare attendance.</p>
+
+  <div class="tabs">
+    <button class="tab active" data-view="babysitter">Babysitter</button>
+    <button class="tab" data-view="daycare">Daycare</button>
+  </div>
+
+  <div id="view-babysitter" class="view">
+  <div class="card">
+    <h2>Settings</h2>
+    <div class="row">
+      <div class="field">
+        <label for="rate">Hourly Rate ($)</label>
+        <input type="number" id="rate" step="0.01" min="0" placeholder="20.00" />
+      </div>
+      <div class="field">
+        <label for="sitterName">Sitter Name (optional)</label>
+        <input type="text" id="sitterName" placeholder="Jane" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Add Session</h2>
+    <div class="row">
+      <div class="field">
+        <label for="manualStart">Clock In</label>
+        <input type="datetime-local" id="manualStart" />
+      </div>
+      <div class="field">
+        <label for="manualEnd">Clock Out <span style="color:var(--muted);font-weight:normal;">(optional)</span></label>
+        <input type="datetime-local" id="manualEnd" />
+      </div>
+      <button id="saveManualBtn">Add Session</button>
+    </div>
+    <div class="form-hint">Leave clock out blank to save as an open session — you can close it later from the table.</div>
+    <div id="addMsg" class="msg" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Dashboard</h2>
+    <div class="row" style="margin-bottom: 16px;">
+      <div class="field">
+        <label for="fromDate">From</label>
+        <input type="date" id="fromDate" />
+      </div>
+      <div class="field">
+        <label for="toDate">To</label>
+        <input type="date" id="toDate" />
+      </div>
+      <button id="thisWeekBtn" class="secondary">This Week</button>
+      <button id="thisMonthBtn" class="secondary">This Month</button>
+      <button id="allTimeBtn" class="secondary">All Time</button>
+    </div>
+    <div class="summary">
+      <div class="stat">
+        <div class="label">Sessions</div>
+        <div class="value" id="statSessions">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Total Hours</div>
+        <div class="value" id="statHours">0.00</div>
+      </div>
+      <div class="stat">
+        <div class="label">Amount Owed</div>
+        <div class="value owed" id="statOwed">$0.00</div>
+      </div>
+    </div>
+    <div id="sessionsTable"></div>
+  </div>
+  </div><!-- /view-babysitter -->
+
+  <div id="view-daycare" class="view" hidden>
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="row">
+        <div class="field">
+          <label for="daycareName">Daycare Name (optional)</label>
+          <input type="text" id="daycareName" placeholder="Little Learners" />
+        </div>
+      </div>
+      <div style="margin-top: 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--muted);">
+        <strong style="color: var(--text);">Rate: $200/week</strong> — billed weekly regardless of attendance (keeps the spot).
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Log Daycare Day</h2>
+      <div class="row">
+        <div class="field">
+          <label for="dcDate">Date</label>
+          <input type="date" id="dcDate" />
+        </div>
+        <div class="field">
+          <label for="dcDropOff">Drop-off Time</label>
+          <input type="time" id="dcDropOff" />
+        </div>
+        <div class="field">
+          <label for="dcPickUp">Pick-up Time <span style="color:var(--muted);font-weight:normal;">(optional)</span></label>
+          <input type="time" id="dcPickUp" />
+        </div>
+      </div>
+      <div class="form-hint">Leave pick-up blank to save as an open day — you can close it later from the table.</div>
+
+      <div style="margin-top: 16px;">
+        <label style="font-size: 13px; color: var(--muted); font-weight: 500;">Supply Refills Requested</label>
+        <div class="checkbox-group" id="dcSupplies">
+          <label><input type="checkbox" value="diapers" /> Diapers</label>
+          <label><input type="checkbox" value="wipes" /> Wipes</label>
+          <label><input type="checkbox" value="clothes" /> Extra Clothes</label>
+          <label><input type="checkbox" value="formula" /> Formula / Milk</label>
+          <label><input type="checkbox" value="food" /> Food / Snacks</label>
+          <label><input type="checkbox" value="bottles" /> Bottles</label>
+          <label><input type="checkbox" value="pacifier" /> Pacifier</label>
+          <label><input type="checkbox" value="medication" /> Medication</label>
+          <label><input type="checkbox" value="sunscreen" /> Sunscreen</label>
+          <label><input type="checkbox" value="blanket" /> Blanket / Bedding</label>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <label style="font-size: 13px; color: var(--muted); font-weight: 500;">Flags</label>
+        <div class="checkbox-group" id="dcFlags">
+          <label><input type="checkbox" value="illness" /> Illness Reported</label>
+          <label><input type="checkbox" value="injury" /> Injury / Incident</label>
+          <label><input type="checkbox" value="behavior" /> Behavior Note</label>
+          <label><input type="checkbox" value="medGiven" /> Medication Given</label>
+          <label><input type="checkbox" value="milestone" /> Milestone / Activity</label>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top: 16px;">
+        <label for="dcNotes">Notes (nap times, meals, mood, incident details, etc.)</label>
+        <textarea id="dcNotes" placeholder="e.g., napped 12:30–2:00, ate full lunch, slight runny nose"></textarea>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <button id="saveDcBtn">Add Day</button>
+      </div>
+      <div id="dcMsg" class="msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Dashboard</h2>
+      <div class="row" style="margin-bottom: 16px;">
+        <div class="field">
+          <label for="dcFromDate">From</label>
+          <input type="date" id="dcFromDate" />
+        </div>
+        <div class="field">
+          <label for="dcToDate">To</label>
+          <input type="date" id="dcToDate" />
+        </div>
+        <button id="dcThisWeekBtn" class="secondary">This Week</button>
+        <button id="dcThisMonthBtn" class="secondary">This Month</button>
+        <button id="dcAllTimeBtn" class="secondary">All Time</button>
+      </div>
+      <div class="summary">
+        <div class="stat">
+          <div class="label">Days Attended</div>
+          <div class="value" id="dcStatDays">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Total Hours</div>
+          <div class="value" id="dcStatHours">0.00</div>
+        </div>
+        <div class="stat">
+          <div class="label">Weeks Billed</div>
+          <div class="value" id="dcStatWeeks">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Total Cost</div>
+          <div class="value owed" id="dcStatCost">$0.00</div>
+        </div>
+      </div>
+      <div id="dcSuppliesSummary" style="margin-bottom: 12px;"></div>
+      <div id="dcTable"></div>
+    </div>
+  </div><!-- /view-daycare -->
+</div>
+
+<script>
+const STORAGE_KEY = "babysitter-tracker-v1";
+
+const DAYCARE_WEEKLY_RATE = 200;
+
+const state = {
+  rate: 0,
+  sitterName: "",
+  sessions: [],
+  daycareName: "",
+  daycareEntries: [],
+};
+
+const SUPPLY_LABELS = {
+  diapers: "Diapers",
+  wipes: "Wipes",
+  clothes: "Extra Clothes",
+  formula: "Formula / Milk",
+  food: "Food / Snacks",
+  bottles: "Bottles",
+  pacifier: "Pacifier",
+  medication: "Medication",
+  sunscreen: "Sunscreen",
+  blanket: "Blanket / Bedding",
+};
+
+const FLAG_LABELS = {
+  illness: "Illness",
+  injury: "Injury",
+  behavior: "Behavior",
+  medGiven: "Med Given",
+  milestone: "Milestone",
+};
+
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      Object.assign(state, data);
+    } catch (e) { console.error(e); }
+  }
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function toInputValue(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function hoursBetween(startIso, endIso) {
+  return (new Date(endIso) - new Date(startIso)) / 3600000;
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function getFilteredSessions() {
+  const from = document.getElementById("fromDate").value;
+  const to = document.getElementById("toDate").value;
+  return state.sessions.filter((s) => {
+    const d = s.start.slice(0, 10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  }).sort((a, b) => b.start.localeCompare(a.start));
+}
+
+function nowInputValue() {
+  return toInputValue(new Date().toISOString());
+}
+
+function renderDashboard() {
+  const sessions = getFilteredSessions();
+  let totalHours = 0;
+  let openCount = 0;
+  for (const s of sessions) {
+    if (s.end) totalHours += hoursBetween(s.start, s.end);
+    else openCount++;
+  }
+  const owed = totalHours * (state.rate || 0);
+  document.getElementById("statSessions").textContent = sessions.length;
+  document.getElementById("statHours").textContent = totalHours.toFixed(2);
+  document.getElementById("statOwed").textContent = `$${owed.toFixed(2)}`;
+
+  const tableWrap = document.getElementById("sessionsTable");
+  if (sessions.length === 0) {
+    tableWrap.innerHTML = `<div class="empty">No sessions in this range.</div>`;
+    return;
+  }
+  const rows = sessions.map((s) => {
+    if (!s.end) {
+      return `
+        <tr class="open-row" data-id="${s.id}">
+          <td>${fmtDateTime(s.start)}</td>
+          <td>
+            <span class="open-badge">In Progress</span>
+            <div class="inline-edit" style="margin-top:6px;">
+              <input type="datetime-local" data-close-input="${s.id}" value="${nowInputValue()}" />
+              <button data-action="close" data-id="${s.id}">Close</button>
+            </div>
+          </td>
+          <td>—</td>
+          <td>—</td>
+          <td class="hide-mobile">
+            <button class="danger" data-action="delete" data-id="${s.id}">Delete</button>
+          </td>
+        </tr>
+      `;
+    }
+    const hrs = hoursBetween(s.start, s.end);
+    const amt = hrs * (state.rate || 0);
+    return `
+      <tr data-id="${s.id}">
+        <td>${fmtDateTime(s.start)}</td>
+        <td>${fmtDateTime(s.end)}</td>
+        <td>${hrs.toFixed(2)}</td>
+        <td>$${amt.toFixed(2)}</td>
+        <td class="hide-mobile">
+          <button class="danger" data-action="delete" data-id="${s.id}">Delete</button>
+          <button class="danger" data-action="edit" data-id="${s.id}" style="color: var(--accent);">Edit</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+  tableWrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Start</th>
+          <th>End</th>
+          <th>Hours</th>
+          <th>Amount</th>
+          <th class="hide-mobile"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderAll() {
+  renderDashboard();
+  renderDaycare();
+}
+
+function hoursBetweenTimes(date, startTime, endTime) {
+  if (!startTime || !endTime) return 0;
+  const s = new Date(`${date}T${startTime}`);
+  const e = new Date(`${date}T${endTime}`);
+  return (e - s) / 3600000;
+}
+
+function getFilteredDaycareEntries() {
+  const from = document.getElementById("dcFromDate").value;
+  const to = document.getElementById("dcToDate").value;
+  return state.daycareEntries.filter((e) => {
+    if (from && e.date < from) return false;
+    if (to && e.date > to) return false;
+    return true;
+  }).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function mondayOf(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const day = d.getDay();
+  d.setDate(d.getDate() - ((day + 6) % 7));
+  return d;
+}
+
+function weeksInRange() {
+  const fromVal = document.getElementById("dcFromDate").value;
+  const toVal = document.getElementById("dcToDate").value;
+  let from = fromVal, to = toVal;
+  if (!from || !to) {
+    const dates = state.daycareEntries.map((e) => e.date).sort();
+    if (dates.length === 0) return 0;
+    const pad = (n) => String(n).padStart(2, "0");
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    if (!from) from = dates[0];
+    if (!to) to = todayStr;
+  }
+  const mFrom = mondayOf(from);
+  const mTo = mondayOf(to);
+  const diffDays = Math.round((mTo - mFrom) / 86400000);
+  return Math.max(0, Math.floor(diffDays / 7) + 1);
+}
+
+function renderDaycare() {
+  const entries = getFilteredDaycareEntries();
+  let totalHours = 0;
+  const supplyCounts = {};
+  for (const e of entries) {
+    totalHours += hoursBetweenTimes(e.date, e.dropOff, e.pickUp);
+    for (const s of (e.supplies || [])) {
+      supplyCounts[s] = (supplyCounts[s] || 0) + 1;
+    }
+  }
+  const weeks = weeksInRange();
+  const totalCost = weeks * DAYCARE_WEEKLY_RATE;
+  document.getElementById("dcStatDays").textContent = entries.length;
+  document.getElementById("dcStatHours").textContent = totalHours.toFixed(2);
+  document.getElementById("dcStatWeeks").textContent = weeks;
+  document.getElementById("dcStatCost").textContent = `$${totalCost.toFixed(2)}`;
+
+  const supWrap = document.getElementById("dcSuppliesSummary");
+  const supKeys = Object.keys(supplyCounts);
+  if (supKeys.length === 0) {
+    supWrap.innerHTML = "";
+  } else {
+    const tags = supKeys.map((k) => `<span class="tag">${SUPPLY_LABELS[k] || k}: ${supplyCounts[k]}</span>`).join("");
+    supWrap.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Supply Refills Requested in Range</div><div class="supply-summary">${tags}</div>`;
+  }
+
+  const tableWrap = document.getElementById("dcTable");
+  if (entries.length === 0) {
+    tableWrap.innerHTML = `<div class="empty">No daycare days in this range.</div>`;
+    return;
+  }
+  const nowTime = (() => {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })();
+  const rows = entries.map((e) => {
+    const hrs = hoursBetweenTimes(e.date, e.dropOff, e.pickUp);
+    const supTags = (e.supplies || []).map((s) => `<span class="tag">${SUPPLY_LABELS[s] || s}</span>`).join("");
+    const flagTags = (e.flags || []).map((f) => `<span class="tag" style="background:rgba(248,113,113,0.18);color:#fca5a5;">${FLAG_LABELS[f] || f}</span>`).join("");
+    const notesHtml = e.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">${escapeHtml(e.notes)}</div>` : "";
+    const isOpen = !e.pickUp;
+    const timeCell = isOpen
+      ? `${e.dropOff || "—"} → <span class="open-badge">Not picked up</span>
+         <div class="inline-edit" style="margin-top:6px;">
+           <input type="time" data-dc-close-input="${e.id}" value="${nowTime}" />
+           <button data-dc-action="close" data-id="${e.id}">Set Pick-up</button>
+         </div>`
+      : `${e.dropOff || "—"} → ${e.pickUp}${hrs > 0 ? ` <span style="color:var(--muted);font-size:12px;">(${hrs.toFixed(2)}h)</span>` : ""}`;
+    return `
+      <tr data-id="${e.id}" class="${isOpen ? "open-row" : ""}">
+        <td>${e.date}</td>
+        <td>${timeCell}</td>
+        <td>${supTags}${flagTags}${notesHtml}</td>
+        <td class="hide-mobile">
+          <button class="danger" data-dc-action="delete" data-id="${e.id}">Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+  tableWrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Drop-off / Pick-up</th>
+          <th>Details</th>
+          <th class="hide-mobile"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function showDcMsg(text, type) {
+  const el = document.getElementById("dcMsg");
+  el.textContent = text;
+  el.className = `msg ${type}`;
+  el.style.display = "block";
+  clearTimeout(showDcMsg._t);
+  if (type === "success") {
+    showDcMsg._t = setTimeout(() => { el.style.display = "none"; }, 3000);
+  }
+}
+
+function getCheckedValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)).map((el) => el.value);
+}
+
+function clearChecks(containerId) {
+  document.querySelectorAll(`#${containerId} input[type="checkbox"]`).forEach((el) => { el.checked = false; });
+}
+
+function setDateRange(from, to) {
+  document.getElementById("fromDate").value = from || "";
+  document.getElementById("toDate").value = to || "";
+  renderDashboard();
+}
+
+function todayLocalISO() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+document.getElementById("rate").addEventListener("input", (e) => {
+  state.rate = parseFloat(e.target.value) || 0;
+  save();
+  renderDashboard();
+});
+
+document.getElementById("sitterName").addEventListener("input", (e) => {
+  state.sitterName = e.target.value;
+  save();
+});
+
+function showMsg(text, type) {
+  const el = document.getElementById("addMsg");
+  el.textContent = text;
+  el.className = `msg ${type}`;
+  el.style.display = "block";
+  clearTimeout(showMsg._t);
+  if (type === "success") {
+    showMsg._t = setTimeout(() => { el.style.display = "none"; }, 3000);
+  }
+}
+
+document.getElementById("saveManualBtn").addEventListener("click", () => {
+  const startEl = document.getElementById("manualStart");
+  const endEl = document.getElementById("manualEnd");
+  const startVal = startEl.value;
+  const endVal = endEl.value;
+  if (!startVal) {
+    showMsg("Please set the clock in time.", "error");
+    return;
+  }
+  const start = new Date(startVal).toISOString();
+  let end = null;
+  if (endVal) {
+    end = new Date(endVal).toISOString();
+    if (new Date(end) <= new Date(start)) {
+      showMsg("Clock out must be after clock in.", "error");
+      return;
+    }
+  }
+  state.sessions.push({ id: uid(), start, end });
+  save();
+  startEl.value = "";
+  endEl.value = "";
+  if (end) {
+    const hrs = hoursBetween(start, end);
+    const amt = hrs * (state.rate || 0);
+    showMsg(`Session added: ${hrs.toFixed(2)} hr ($${amt.toFixed(2)})`, "success");
+  } else {
+    showMsg(`Open session started — close it from the table when done.`, "success");
+  }
+  renderDashboard();
+});
+
+document.getElementById("sessionsTable").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const session = state.sessions.find((s) => s.id === id);
+  if (!session) return;
+  if (btn.dataset.action === "delete") {
+    if (confirm("Delete this session?")) {
+      state.sessions = state.sessions.filter((s) => s.id !== id);
+      save();
+      renderDashboard();
+    }
+  } else if (btn.dataset.action === "close") {
+    const input = document.querySelector(`[data-close-input="${id}"]`);
+    const val = input && input.value;
+    if (!val) { showMsg("Please pick a clock out time.", "error"); return; }
+    const end = new Date(val).toISOString();
+    if (new Date(end) <= new Date(session.start)) {
+      showMsg("Clock out must be after clock in.", "error");
+      return;
+    }
+    session.end = end;
+    save();
+    const hrs = hoursBetween(session.start, end);
+    const amt = hrs * (state.rate || 0);
+    showMsg(`Session closed: ${hrs.toFixed(2)} hr ($${amt.toFixed(2)})`, "success");
+    renderDashboard();
+  } else if (btn.dataset.action === "edit") {
+    const newStart = prompt("Start (YYYY-MM-DD HH:MM):", toInputValue(session.start).replace("T", " "));
+    if (!newStart) return;
+    const newEnd = prompt("End (YYYY-MM-DD HH:MM):", session.end ? toInputValue(session.end).replace("T", " ") : "");
+    if (!newEnd) return;
+    const s = new Date(newStart.replace(" ", "T"));
+    const ev = new Date(newEnd.replace(" ", "T"));
+    if (isNaN(s) || isNaN(ev) || ev <= s) { showMsg("Invalid times.", "error"); return; }
+    session.start = s.toISOString();
+    session.end = ev.toISOString();
+    save();
+    renderDashboard();
+  }
+});
+
+document.getElementById("fromDate").addEventListener("change", renderDashboard);
+document.getElementById("toDate").addEventListener("change", renderDashboard);
+
+document.getElementById("thisWeekBtn").addEventListener("click", () => {
+  const today = new Date();
+  const day = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((day + 6) % 7));
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  setDateRange(fmt(monday), fmt(today));
+});
+
+document.getElementById("thisMonthBtn").addEventListener("click", () => {
+  const today = new Date();
+  const first = new Date(today.getFullYear(), today.getMonth(), 1);
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  setDateRange(fmt(first), fmt(today));
+});
+
+document.getElementById("allTimeBtn").addEventListener("click", () => setDateRange("", ""));
+
+document.querySelectorAll(".tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".view").forEach((v) => { v.hidden = true; });
+    document.getElementById(`view-${btn.dataset.view}`).hidden = false;
+  });
+});
+
+document.getElementById("daycareName").addEventListener("input", (e) => {
+  state.daycareName = e.target.value;
+  save();
+});
+
+document.getElementById("saveDcBtn").addEventListener("click", () => {
+  const date = document.getElementById("dcDate").value;
+  const dropOff = document.getElementById("dcDropOff").value;
+  const pickUp = document.getElementById("dcPickUp").value;
+  const notes = document.getElementById("dcNotes").value.trim();
+  if (!date) { showDcMsg("Please pick a date.", "error"); return; }
+  if (dropOff && pickUp && pickUp <= dropOff) {
+    showDcMsg("Pick-up must be after drop-off.", "error");
+    return;
+  }
+  const entry = {
+    id: uid(),
+    date,
+    dropOff: dropOff || null,
+    pickUp: pickUp || null,
+    supplies: getCheckedValues("dcSupplies"),
+    flags: getCheckedValues("dcFlags"),
+    notes,
+  };
+  state.daycareEntries.push(entry);
+  save();
+  document.getElementById("dcDate").value = "";
+  document.getElementById("dcDropOff").value = "";
+  document.getElementById("dcPickUp").value = "";
+  document.getElementById("dcNotes").value = "";
+  clearChecks("dcSupplies");
+  clearChecks("dcFlags");
+  showDcMsg(`Day logged for ${date}.`, "success");
+  renderDaycare();
+});
+
+document.getElementById("dcTable").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-dc-action]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const entry = state.daycareEntries.find((x) => x.id === id);
+  if (!entry) return;
+  if (btn.dataset.dcAction === "delete") {
+    if (confirm("Delete this day?")) {
+      state.daycareEntries = state.daycareEntries.filter((x) => x.id !== id);
+      save();
+      renderDaycare();
+    }
+  } else if (btn.dataset.dcAction === "close") {
+    const input = document.querySelector(`[data-dc-close-input="${id}"]`);
+    const val = input && input.value;
+    if (!val) { showDcMsg("Please pick a pick-up time.", "error"); return; }
+    if (entry.dropOff && val <= entry.dropOff) {
+      showDcMsg("Pick-up must be after drop-off.", "error");
+      return;
+    }
+    entry.pickUp = val;
+    save();
+    showDcMsg(`Pick-up set to ${val}.`, "success");
+    renderDaycare();
+  }
+});
+
+document.getElementById("dcFromDate").addEventListener("change", renderDaycare);
+document.getElementById("dcToDate").addEventListener("change", renderDaycare);
+
+function setDcDateRange(from, to) {
+  document.getElementById("dcFromDate").value = from || "";
+  document.getElementById("dcToDate").value = to || "";
+  renderDaycare();
+}
+
+document.getElementById("dcThisWeekBtn").addEventListener("click", () => {
+  const today = new Date();
+  const day = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((day + 6) % 7));
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  setDcDateRange(fmt(monday), fmt(today));
+});
+
+document.getElementById("dcThisMonthBtn").addEventListener("click", () => {
+  const today = new Date();
+  const first = new Date(today.getFullYear(), today.getMonth(), 1);
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  setDcDateRange(fmt(first), fmt(today));
+});
+
+document.getElementById("dcAllTimeBtn").addEventListener("click", () => setDcDateRange("", ""));
+
+load();
+document.getElementById("rate").value = state.rate || "";
+document.getElementById("sitterName").value = state.sitterName || "";
+document.getElementById("daycareName").value = state.daycareName || "";
+const today = new Date();
+const pad = (n) => String(n).padStart(2, "0");
+document.getElementById("dcDate").value = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+renderAll();
+</script>
+</body>
+</html>
